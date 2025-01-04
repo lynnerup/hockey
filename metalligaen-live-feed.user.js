@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Add remaining time to Metalligaen.dk live feed
 // @namespace    MetalligaenLive
-// @version      1.0
+// @version      2025-01-04
 // @description  try to take over the world!
 // @author       You
 // @match        https://metalligaen.dk/live/
