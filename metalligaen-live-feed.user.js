@@ -39,21 +39,21 @@ function makeCommentMoreReadable() {
       if(contentHasLoaded) {
         var m = "";
 
-        m = text.match("^I tiden .+? scorer ([a-zA-Z]+) .+? til stillingen (.+?)\\. Målet blev scoret af spiller (.+?), assisteret af (.+?) og af (.+?)\\. \\[(.+?)\\]$");
+        m = text.match("^I tiden .+? scorer ([a-zA-ZæøåÆØÅ]+) .+? til stillingen (.+?)\\. Målet blev scoret af spiller (.+?), assisteret af (.+?) og af (.+?)\\. \\[(.+?)\\]$");
 
         if(m) {
             $(obj).text(`${m[1]} [${m[6]}] | ${m[2]} | ${m[3]}, ${m[4]}, ${m[5]}`);
             return;
         }
 
-        m = text.match("^I tiden .+? scorer ([a-zA-Z]+) .+? til stillingen (.+?)\\. Målet blev scoret af spiller (.+?), assisteret af (.+?)\\. \\[(.+?)\\]$");
+        m = text.match("^I tiden .+? scorer ([a-zA-ZæøåÆØÅ]+) .+? til stillingen (.+?)\\. Målet blev scoret af spiller (.+?), assisteret af (.+?)\\. \\[(.+?)\\]$");
 
         if(m) {
             $(obj).text(`${m[1]} [${m[5]}] | ${m[2]} | ${m[3]}, ${m[4]}`);
             return;
         }
 
-        m = text.match("^I tiden .+? scorer ([a-zA-Z]+) .+? til stillingen (.+?)\\. Målet blev scoret af spiller (.+?)\\. \\[(.+?)\\]$");
+        m = text.match("^I tiden .+? scorer ([a-zA-ZæøåÆØÅ]+) .+? til stillingen (.+?)\\. Målet blev scoret af spiller (.+?)\\. \\[(.+?)\\]$");
 
         if(m) {
             $(obj).text(`${m[1]} [${m[4]}] | ${m[2]} | ${m[3]}`);
