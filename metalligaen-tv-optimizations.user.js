@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Metalligaen.tv player optimizations
 // @namespace    MetalligaenLive
-// @version      2025-02-01
+// @version      2025-02-02
 // @description  Fixer lortensen
 // @author       You
 // @match        https://www.metalligaen.tv/da/game/*
