@@ -1,10 +1,10 @@
 // ==UserScript==
 // @name         Metalligaen.tv player optimizations
 // @namespace    MetalligaenLive
-// @version      2025-02-02
+// @version      2025-02-04
 // @description  Fixer lortensen
 // @author       You
-// @match        https://www.metalligaen.tv/da/game/*
+// @match        https://www.metalligaen.tv/*
 // @icon         https://files.livearenasports.com/files/20148a38-7b29-4e41-bbc5-1281abde2aae
 // @require      https://lars.hillsbrook.dk/tampermonkey-helpers.js
 // @grant        none
@@ -13,15 +13,20 @@
 (function () {
   'use strict';
 
+  console.log('Loading script: Metalligaen.tv player optimizations');
+  console.log('window.customElements.get("app-root-play-site")', window.customElements.get('app-root-play-site'));
+
   // Don't pause on tab change (we need to add this immediately/before videojs own eventlistener - for it to work)
   document.addEventListener('visibilitychange', function (e) {
     e.stopImmediatePropagation();
   });
 
-  console.log('Loading script: Metalligaen.tv player optimizations');
-  console.log('window.customElements.get("app-root-play-site")', window.customElements.get('app-root-play-site'));
+  window.addEventListener('ionRouteDidChange', function () {
+    console.log('ionRouteDidChange');
+    runCode();
+  });
 
-  /* Prevent overflow in fullscreen - because mobile browsers auto decides to fit or stretch */
+  // Prevent overflow in fullscreen - because mobile browsers auto decides to fit or stretch
   const css = [
     `.vjs-fullscreen #app-video_html5_api {
       height: 100vh !important;
@@ -33,6 +38,14 @@
   loadScripts(scripts, 0, runCode);
 
   function runCode() {
+    // Test solution for now
+    if (!window.location.href.startsWith('https://www.metalligaen.tv/da/game/')) {
+      console.log('This is not a game page - returning.');
+      return;
+    } else {
+      console.log('This is a game page!');
+    }
+
     // TODO: Maybe we can do this smarter and check when the video element is loaded instead of a timeout
     // Maybe just make a function that spam-checks this: window.customElements.get('app-root-play-site')
 
