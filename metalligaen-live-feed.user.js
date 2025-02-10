@@ -84,7 +84,7 @@ function makeCommentMoreReadable() {
         m = text.match("^I tiden .+? udvises (.+?) fra (.+?) (.+) ([0-9]+) minutter for (.+?)\\.$");
 
         if(m) {
-            $(obj).text(`${m[2]} | ${m[4]} mins | ${m[5]} | ${m[1]}`);
+            $(obj).text(`${m[5]} | ${m[4]} mins | ${m[2]} | ${m[1]}`);
             return;
         }
       }
