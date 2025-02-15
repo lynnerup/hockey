@@ -55,6 +55,9 @@
       console.log('This is a game page!');
     }
 
+    // Player sync
+    initPlayerSyncToolbar();
+
     const videoPlayer = videojs('app-video');
     const nativeVideoPlayer = document.getElementById('app-video_html5_api');
 
@@ -129,3 +132,198 @@
     // });
   }
 })();
+
+async function initPlayerSyncToolbar() {
+  let targetElement = document.getElementsByTagName('body')[0];
+
+  // Create toolbar
+  const wrapper = document.createElement('div');
+  wrapper.id = 'custom-extension-toolbar';
+  wrapper.insertAdjacentHTML(
+    'beforeend',
+    `
+    <button id="toolbar-get-server-time" class="">Get server time</button>
+    <button id="toolbar-set-server-time" class="">Set server time</button>
+    <div class="checkbox-container">
+      <label>
+        <span>I am the client</span>
+        <input id="toolbar-isclient" type="checkbox" name="isclient">
+      </label>
+    </div>
+    <div class="checkbox-container">
+      <label>
+        <span>I am the server</span>
+        <input id="toolbar-isserver" type="checkbox" name="isserver">
+      </label>
+    </div>
+    `
+  );
+
+  targetElement.appendChild(wrapper);
+
+  // Add css element
+  const customCss = `
+    #custom-extension-toolbar {
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      z-index: 999;
+      text-align: right;
+    }
+
+    #custom-extension-toolbar button,
+    #custom-extension-toolbar .checkbox-container {
+      /*width: 100px;*/
+      width: auto;
+      margin: 0;
+      padding: 10px;
+
+      background-color: white;
+      color: black;
+      border: 1px solid black;
+      border-radius: 10px;
+      cursor: pointer;
+
+      font-size: 12px;
+      font-weight: 500;
+      font-family: sans-serif;
+      text-transform: uppercase;
+    }
+
+    #custom-extension-toolbar .checkbox-container {
+      display: inline-block;
+    }
+
+    #custom-extension-toolbar .checkbox-container label {
+      cursor: pointer;
+    }
+
+    #custom-extension-toolbar input[type="checkbox"] {
+      vertical-align: middle;
+    }
+
+    #custom-extension-toolbar button.custom-error {
+      background-color: #dc3545;
+      color: white;
+    }
+
+    #custom-extension-toolbar button.custom-success {
+      background-color: #7bbb27;
+      color: white;
+    }
+  `;
+
+  const styleElement = document.createElement('style');
+  styleElement.textContent = customCss;
+
+  document.head.appendChild(styleElement);
+
+  // Add javascript
+  document.getElementById('toolbar-get-server-time').addEventListener('click', getServerTime);
+  document.getElementById('toolbar-set-server-time').addEventListener('click', setServerTime);
+
+  let isClientIntervalId;
+  const isClientCheckbox = document.getElementById('toolbar-isclient');
+  isClientCheckbox.addEventListener('change', (event) => {
+    if (event.target.checked) {
+      // Run now
+      getServerTime();
+
+      // Start the interval if the checkbox is checked
+      isClientIntervalId = setInterval(getServerTime, 5000);
+    } else {
+      // Clear the interval if the checkbox is unchecked
+      clearInterval(isClientIntervalId);
+    }
+  });
+
+  let isServerIntervalId;
+  const isServerCheckbox = document.getElementById('toolbar-isserver');
+  isServerCheckbox.addEventListener('change', (event) => {
+    const videoPlayer = document.getElementById('app-video_html5_api');
+    console.log('videoPlayer:', videoPlayer);
+
+    if (event.target.checked) {
+      // Run now
+      setServerTime();
+
+      // Start the interval if the checkbox is checked
+      isServerIntervalId = setInterval(setServerTime, 5000);
+
+      // Add listeners to the video player
+      if (videoPlayer) {
+        videoPlayer.addEventListener('play', setServerTime);
+        videoPlayer.addEventListener('pause', setServerTime);
+        videoPlayer.addEventListener('seeked', setServerTime);
+      }
+    } else {
+      // Clear the interval if the checkbox is unchecked
+      clearInterval(isServerIntervalId);
+
+      if (videoPlayer) {
+        // Remove listeners to the video player
+        videoPlayer.removeEventListener('play', setServerTime);
+        videoPlayer.removeEventListener('pause', setServerTime);
+        videoPlayer.removeEventListener('seeked', setServerTime);
+      }
+    }
+  });
+}
+
+async function getServerTime() {
+  fetch('https://makestreamiordensen.webshape.dk/client.php')
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+      return response.json(); // Parse the JSON from the response
+    })
+    .then((data) => {
+      // console.log('Call to server: Success', data);
+
+      const videoPlayer = document.getElementById('app-video_html5_api');
+      if (!videoPlayer) return;
+
+      let streamTime = Number.parseFloat(data.StreamTime);
+      const serverTime = new Date(data.ServerTime);
+      const isPaused = data.IsPaused == 1 ? true : false;
+      const currentTime = new Date();
+
+      if (isPaused) videoPlayer.pause();
+      else if (videoPlayer.paused) videoPlayer.play();
+
+      if (!isPaused) {
+        // Find out the diff here
+        const serverClientTimeDiff = currentTime.getTime() - serverTime.getTime(); // In milliseconds
+        const diffInSeconds = Math.abs(serverClientTimeDiff / 1000);
+        streamTime += diffInSeconds;
+      }
+
+      // Check if it is neccessary to set the player time - because it stutters (diff bigger than 1 sec)
+      if (Math.abs(streamTime - videoPlayer.currentTime) > 1) {
+        videoPlayer.currentTime = streamTime;
+      }
+    })
+    .catch((error) => {
+      console.log('Call to server: Failed', error);
+    });
+}
+
+async function setServerTime() {
+  const videoPlayer = document.getElementById('app-video_html5_api');
+  if (!videoPlayer) return;
+
+  const streamTime = videoPlayer.currentTime;
+  const serverTime = new Date().toISOString();
+  const isPaused = videoPlayer.paused ? 1 : 0;
+
+  fetch(`https://makestreamiordensen.webshape.dk/server.php?serverTime=${serverTime}&streamTime=${streamTime}&isPaused=${isPaused}`)
+    .then((response) => {
+      if (!response.ok) throw new Error('Network response was not ok');
+
+      // console.log('Call to server: Success', response);
+    })
+    .catch((error) => {
+      console.log('Call to server: Failed', error);
+    });
+}
