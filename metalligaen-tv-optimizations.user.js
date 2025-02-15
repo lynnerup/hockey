@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Metalligaen.tv player optimizations
 // @namespace    MetalligaenLive
-// @version      2025-02-03
+// @version      2025-02-15
 // @description  Fixer lortensen
 // @author       You
 // @match        https://www.metalligaen.tv/*
@@ -73,11 +73,9 @@
     console.log('Setting volume based on localStorage setting');
     videoPlayer.volume(Number.parseFloat(localStorage.getItem('mtv-volume') ?? 1.0));
 
-    if (!videoPlayer.muted() == false) {
-      // Hide big mute icon
-      console.log('Hiding big mute icon');
-      document.getElementById('mute-overlay').style.display = 'none';
-    }
+    // Hide big mute icon
+    console.log('Hiding big mute icon');
+    document.getElementById('mute-overlay').style.display = 'none';
 
     // Change default volume to 100%
     if (videoPlayer.volume() == 0.5) {
@@ -95,6 +93,30 @@
       console.log('volumechange event - saving to localStorage (muted, volume)', e.target.muted, e.target.volume);
       localStorage.setItem('mtv-muted', e.target.muted);
       localStorage.setItem('mtv-volume', e.target.volume);
+    });
+
+    // Keybindings
+    document.addEventListener('keydown', function (e) {
+      switch (e.key.toLowerCase()) {
+        case 'f':
+          if (!document.fullscreenElement) {
+            nativeVideoPlayer.requestFullscreen();
+          } else {
+            document.exitFullscreen();
+          }
+          break;
+        case 'm':
+          videoPlayer.muted(!videoPlayer.muted());
+          break;
+        case 'arrowup':
+          videoPlayer.volume(videoPlayer.volume() + 0.1);
+          break;
+        case 'arrowdown':
+          videoPlayer.volume(videoPlayer.volume() - 0.1);
+          break;
+        default:
+          break;
+      }
     });
 
     // // Double click
