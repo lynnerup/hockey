@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Metalligaen.tv player optimizations
 // @namespace    MetalligaenLive
-// @version      2025-02-15
+// @version      2025-02-16
 // @description  Fixer lortensen
 // @author       You
 // @match        https://www.metalligaen.tv/*
@@ -103,7 +103,7 @@
       switch (e.key.toLowerCase()) {
         case 'f':
           if (!document.fullscreenElement) {
-            nativeVideoPlayer.requestFullscreen();
+            videoPlayer.requestFullscreen();
           } else {
             document.exitFullscreen();
           }
