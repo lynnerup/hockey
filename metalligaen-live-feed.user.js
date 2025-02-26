@@ -1,11 +1,12 @@
 // ==UserScript==
-// @name         Add remaining time to Metalligaen.dk live feed
+// @name         Metalligaen.dk live feed optimizations
 // @namespace    MetalligaenLive
-// @version      2025-02-10
+// @version      2025-02-26
 // @description  try to take over the world!
 // @author       You
 // @match        https://metalligaen.dk/live/
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=metalligaen.dk
+// @require      https://lars.hillsbrook.dk/tampermonkey-helpers.js
 // @grant        none
 // ==/UserScript==
 
@@ -96,10 +97,34 @@ function fixTable() {
   makeCommentMoreReadable();
 }
 
+function addPlayerSearch() {
+  const css = [
+    `.line-up__player:hover {
+      cursor: pointer;
+    }`,
+  ];
+  loadCustomStyling(css);
+
+  document.querySelector('#tab_nav-line-ups')?.addEventListener('click', (e) => {
+    const players = document.querySelectorAll('.line-up__player');
+
+    players.forEach((x) => {
+      x.addEventListener('click', (e) => {
+        const name = x.querySelector('.line-up__player-name').innerText.replaceAll('.', '').replaceAll(' ', '+');
+
+        // window.open(`https://www.eliteprospects.com/search/player?q=${name}`, '_blank').focus();
+        window.open(`https://www.google.com/search?q="eliteprospects"+${name}`, '_blank').focus();
+      });
+    });
+  });
+}
+
 (function () {
   'use strict';
 
   fixTable();
 
   window.setInterval(fixTable, 3000);
+
+  addPlayerSearch();
 })();
