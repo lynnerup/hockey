@@ -41,6 +41,13 @@ function makeCommentMoreReadable() {
       if(contentHasLoaded) {
         var m = "";
 
+        m = text.match("^Udvisningen til .* er slut.$");
+        
+        if(m) {
+            $(obj).closest('tr').remove();
+            return;
+        }
+
         m = text.match("^I tiden .+? scorer ([a-zA-ZæøåÆØÅ]+) .+? til stillingen (.+?)\\. Målet blev scoret af spiller (.+?), assisteret af (.+?) og af (.+?)\\. \\[(.+?)\\]$");
 
         if(m) {
