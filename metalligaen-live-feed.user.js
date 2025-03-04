@@ -513,12 +513,18 @@ class App {
   }
 
   static setupEventListeners() {
+    
+    // Wait until the games has loaded on the page.
+    if($('.live-score__button').length == 0) {
+      setTimeout(App.setupEventListeners, 1000);
+    }
+
     // When a game is selected, update our ui.
     $('.live-score__button').bind('click', e => {
       var gameIdString = $(e.target).attr('aria-controls').replace('gameDetails', '');
       App.selectedGameId = parseInt(gameIdString);
       App.updateUi();
-  });
+    });
   }
 
   static init() {
