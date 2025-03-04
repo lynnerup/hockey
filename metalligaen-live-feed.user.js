@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Metalligaen.dk live feed optimizations
 // @namespace    MetalligaenLive
-// @version      2025-03-02
+// @version      2025-03-04
 // @description  try to take over the world!
 // @author       You
 // @match        https://metalligaen.dk/live/
@@ -10,7 +10,7 @@
 // @grant        none
 // ==/UserScript==
 
-/* TODO: Move these methods into the classes below. */
+/* TODO: Move these methods into the classes below, so they work without delay. */
 function addRemainingTime() {
   $('#nav-tabContent tbody tr td:first-of-type').each((index, obj) => {
     var text = $(obj).text();
@@ -106,12 +106,13 @@ function fixTable() {
 }
 
 function addPlayerSearch() {
-  const css = [
-    `.line-up__player:hover {
+  const css = `
+    .line-up__player:hover {
       cursor: pointer;
-    }`,
-  ];
-  loadCustomStyling(css);
+    }
+  `;
+
+  Page.importCss(css);
 
   document.querySelector('#tab_nav-line-ups')?.addEventListener('click', (e) => {
     const players = document.querySelectorAll('.line-up__player');
@@ -127,11 +128,6 @@ function addPlayerSearch() {
   });
 }
 
-/*
- * TODO:
- *     - Make table prettier (goals and penalties)
- *     - Remove "Udvisningen er slut..."
- */
 
 /* LINQ */
 
@@ -166,10 +162,27 @@ Array.prototype.groupByToList = function(keySelector) {
     ]));
 };
 
-Array.prototype.orderBy = function(valueSelector) {
+// Orders by the first selector descending, and by the second selector ascending.
+Array.prototype.orderByDescending = function(valueSelector, valueSelector2) {
   var compare = (o1, o2) => {
     var v1 = valueSelector(o1);
     var v2 = valueSelector(o2);
+
+    if (v1 < v2) {
+      return 1;
+    }
+
+    if (v1 > v2) {
+      return -1;
+    }
+
+    // They have equal 1. value
+    if(!valueSelector2) {
+      return 0;
+    }
+
+    v1 = valueSelector2(o1);
+    v2 = valueSelector2(o2);
 
     if (v1 < v2) {
       return -1;
@@ -187,25 +200,13 @@ Array.prototype.orderBy = function(valueSelector) {
   return this;
 }
 
-Array.prototype.orderByDescending = function(valueSelector) {
-  var compare = (o1, o2) => {
-    var v1 = valueSelector(o1);
-    var v2 = valueSelector(o2);
-
-    if (v1 < v2) {
-      return 1;
+Array.prototype.distinct = function(valueSelector) {
+  return this.reduce((unique, o1) => {
+    if(!unique.some(o2 => valueSelector(o2) === valueSelector(o1))) {
+      unique.push(o1);
     }
-
-    if (v1 > v2) {
-      return -1;
-    }
-
-    return 0;
-  }
-  
-  this.sort(compare);
-
-  return this;
+    return unique;
+  }, []);
 }
 
 
@@ -335,7 +336,7 @@ class Ui {
     var html = '';
 
     GameJson.getPenaltiesPrPerson(gameJson)
-      .orderByDescending(x => x.penaltyMinutes)
+      .orderByDescending(x => x.penaltyMinutes, x => x.name)
       .forEach(player => {
         var subHtml = `
           <tr onclick="window.open('https://www.google.com/search?q=%22eliteprospects%22+` + player.teamTown + `+` + player.name + `',  '_blank')">
@@ -372,7 +373,7 @@ class Ui {
     var html = '';
 
     GameJson.getPointsPrPerson(gameJson)
-      .orderByDescending(x => x.points)
+      .orderByDescending(x => x.points, x => x.name)
       .forEach(player => {
         var subHtml = `
           <tr onclick="window.open('https://www.google.com/search?q=%22eliteprospects%22+` + player.teamTown + `+` + player.name + `',  '_blank')">
@@ -407,9 +408,7 @@ class Ui {
       $('#point-summary').append(html);
   }
 
-  static update(gamesJson) {
-    var gameJson = gamesJson[0];
-
+  static update(gameJson) {
     Ui.updatePenaltySummary(gameJson);
     Ui.updatePointSummary(gameJson);
   }
@@ -421,7 +420,8 @@ class Ui {
       }
       
       .headline {
-        margin-top: 30px;
+        max-width: 600px;
+        margin: 30px auto 0;
         padding: 7px 0;
         background: #cce1e6;
         text-align: center;
@@ -430,6 +430,8 @@ class Ui {
       }
       
       .player-table {
+        max-width: 600px;
+        margin: 0 auto;
         padding: 10px;
         background: white;
         font-size: 0.9em;
@@ -437,6 +439,7 @@ class Ui {
 
         .player-table th, .player-table td {
           padding: 0 3px;
+          cursor: pointer;
         }
 
         .player-table table {
@@ -460,14 +463,38 @@ class Ui {
 }
 
 class App {
+  static latestReceivedJsonGames = '';
+  static selectedGameId = 0;
+
+  static updateUi() {
+    if(App.latestReceivedJsonGames != '' && App.selectedGameId > 0) {
+      var gameJson = this.latestReceivedJsonGames
+        .first(g => g.gameID == App.selectedGameId);
+      
+      Ui.update(gameJson);
+    }
+  }
+
+  static cacheDataAndFixBugs(jsonGames) {
+    // The data received from the backend contains bugs.
+    // Specifically, it contains duplicated in the goals list.
+
+    jsonGames.forEach(g => {
+      g.goals = g.goals.distinct(goal => goal.goalTime);
+    });
+
+    App.latestReceivedJsonGames = jsonGames;
+  }
+
   static awaitAndHandleHttpResponse(xhr) {
     if(xhr.status == 0) {
         console.log('Response not received yet. Trying again.');
         setTimeout(() => App.awaitAndHandleHttpResponse(xhr), 500);
     } else {
-        var json = JSON.parse(xhr.responseText);
-        console.log('Got response', json);
-        Ui.update(json);
+        var jsonGames = JSON.parse(xhr.responseText);
+        console.log('Got response', jsonGames);
+        App.cacheDataAndFixBugs(jsonGames);
+        App.updateUi();
     }
   }
 
@@ -485,9 +512,19 @@ class App {
     };
   }
 
+  static setupEventListeners() {
+    // When a game is selected, update our ui.
+    $('.live-score__button').bind('click', e => {
+      var gameIdString = $(e.target).attr('aria-controls').replace('gameDetails', '');
+      App.selectedGameId = parseInt(gameIdString);
+      App.updateUi();
+  });
+  }
+
   static init() {
     Ui.init();
     App.setupHttpInterceptor();
+    App.setupEventListeners();
   }
 }
 
