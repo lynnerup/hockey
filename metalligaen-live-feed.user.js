@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Metalligaen.dk live feed optimizations
 // @namespace    MetalligaenLive
-// @version      2025-03-04.01
+// @version      2025-03-05
 // @description  try to take over the world!
 // @author       You
 // @match        https://metalligaen.dk/live/
@@ -10,123 +10,8 @@
 // @grant        none
 // ==/UserScript==
 
-/* TODO: Move these methods into the classes below, so they work without delay. */
-function addRemainingTime() {
-  $('#nav-tabContent tbody tr td:first-of-type').each((index, obj) => {
-    var text = $(obj).text();
-    var contentHasLoaded = text.indexOf('{{') < 0;
-    var hasBeenAdded = text.indexOf('(') > 0;
-
-    if (!hasBeenAdded && contentHasLoaded) {
-      var minutesString = text.substring(0, 2);
-      var secondsString = text.substring(3);
-      var totalSeconds = (parseInt(minutesString) * 60 + parseInt(secondsString)) % (20 * 60);
-      var remainingTotalSeconds = 20 * 60 - totalSeconds;
-      var remainingMinutes = Math.floor(remainingTotalSeconds / 60);
-      var remainingSeconds = remainingTotalSeconds - remainingMinutes * 60;
-      var timeString = ' (' + remainingMinutes.toString().padStart(2, '0') + ':' + remainingSeconds.toString().padStart(2, '0') + ')';
-
-      $(obj).text(text + timeString);
-    }
-  });
-
-  $('#nav-tabContent tr td:first-of-type').css('white-space', 'nowrap');
-}
-
-function makeCommentMoreReadable() {
-  $('#nav-tabContent tbody tr td:nth-of-type(2)').each((index, obj) => {
-      var text = $(obj).text().trim();
-      var contentHasLoaded = text.indexOf('{{') < 0;
-
-      if(contentHasLoaded) {
-        var m = "";
-
-        m = text.match("^Udvisningen til .* er slut.$");
-        
-        if(m) {
-            $(obj).closest('tr').remove();
-            return;
-        }
-
-        m = text.match("^I tiden .+? scorer ([a-zA-ZæøåÆØÅ]+) .+? til stillingen (.+?)\\. Målet blev scoret af spiller (.+?), assisteret af (.+?) og af (.+?)\\. \\[(.+?)\\]$");
-
-        if(m) {
-            $(obj).text(`${m[1]} [${m[6]}] | ${m[2]} | ${m[3]}, ${m[4]}, ${m[5]}`);
-            return;
-        }
-
-        m = text.match("^I tiden .+? scorer ([a-zA-ZæøåÆØÅ]+) .+? til stillingen (.+?)\\. Målet blev scoret af spiller (.+?), assisteret af (.+?)\\. \\[(.+?)\\]$");
-
-        if(m) {
-            $(obj).text(`${m[1]} [${m[5]}] | ${m[2]} | ${m[3]}, ${m[4]}`);
-            return;
-        }
-
-        m = text.match("^I tiden .+? scorer ([a-zA-ZæøåÆØÅ]+) .+? til stillingen (.+?)\\. Målet blev scoret af spiller (.+?)\\. \\[(.+?)\\]$");
-
-        if(m) {
-            $(obj).text(`${m[1]} [${m[4]}] | ${m[2]} | ${m[3]}`);
-            return;
-        }
-
-        m = text.match("^(.+?): \\(.+?\\) (.+?) (.+) \\[(.+?)\\]\\. (.+?) \\(uassisteret\\)$");
-
-        if(m) {
-            $(obj).text(`${m[2]} [${m[4]}] | ${m[1]} | ${m[5]}`);
-            return;
-        }
-
-        m = text.match("^(.+?): \\(.+?\\) (.+?) (.+) \\[(.+?)\\]\\. (.+?) \\((.*?), (.*?)\\)$");
-
-        if(m) {
-            $(obj).text(`${m[2]} [${m[4]}] | ${m[1]} | ${m[5]}, ${m[6]}, ${m[7]}`);
-            return;
-        }
-
-        m = text.match("^(.+?): \\(.+?\\) (.+?) (.+) \\[(.+?)\\]\\. (.+?) \\((.*?)\\)$");
-
-        if(m) {
-            $(obj).text(`${m[2]} [${m[4]}] | ${m[1]} | ${m[5]}, ${m[6]}`);
-            return;
-        }
-
-        m = text.match("^I tiden .+? udvises (.+?) fra (.+?) (.+) ([0-9]+) minutter for (.+?)\\.$");
-
-        if(m) {
-            $(obj).text(`${m[5]} | ${m[4]} mins | ${m[2]} | ${m[1]}`);
-            return;
-        }
-      }
-  });
-}
-
-function fixTable() {
-  addRemainingTime();
-  makeCommentMoreReadable();
-}
-
-function addPlayerSearch() {
-  const css = `
-    .line-up__player:hover {
-      cursor: pointer;
-    }
-  `;
-
-  Page.importCss(css);
-
-  document.querySelector('#tab_nav-line-ups')?.addEventListener('click', (e) => {
-    const players = document.querySelectorAll('.line-up__player');
-
-    players.forEach((x) => {
-      x.addEventListener('click', (e) => {
-        const name = x.querySelector('.line-up__player-name').innerText.replaceAll('.', '').replaceAll(' ', '+');
-
-        // window.open(`https://www.eliteprospects.com/search/player?q=${name}`, '_blank').focus();
-        window.open(`https://www.google.com/search?q="eliteprospects"+${name}`, '_blank').focus();
-      });
-    });
-  });
-}
+// TODO:
+//     - In highlights table, the time remaining does not take playoffs into account, where overtime is still 20 minutes.
 
 
 /* LINQ */
@@ -145,6 +30,10 @@ Array.prototype.first = function(selector) {
       return item;
     }
   }
+};
+
+Array.prototype.where = function(selector) {
+  return this.filter(selector);
 };
 
 Array.prototype.groupByToList = function(keySelector) {
@@ -330,6 +219,63 @@ class GameJson {
 }
 
 class Ui {
+  static setupLightningTab() {
+    // Insert new tab content
+    var html = `
+      <div class="tab__panel tab-pane" id="tab__panel-lightning" role="tabpanel" aria-labelledby="tab_nav-lightning">
+        <div class="headline with-checkbox">
+          HIGHLIGHTS
+          <div>
+            <label for="toggle-details">Show players</label>
+            <input type="checkbox" id="toggle-details" checked="checked" onclick="Ui.toggleDetails(this);">
+          </div>
+        </div>
+        <div class="player-table">
+          <table>
+            <tbody id="highlights-table"></tbody>
+          </table>
+        </div>
+        <div class="headline">POINT</div>
+        <div id="point-summary" class="player-table"></div>
+        <div class="headline">UDVISNINGER</div>
+        <div id="penalty-summary" class="player-table"></div>
+      </div>
+    `;
+
+    $('#nav-tabContent').prepend(html);
+
+    // Insert new tab
+    html = `
+      <a class="tab__nav-item nav-item nav-link" id="tab_nav-lightning" data-toggle="tab" href="#tab__panel-lightning" role="tab" aria-controls="tab__panel-lightning" aria-selected="true">lightning</a>
+    `;
+
+    $('#nav-tab').prepend(html);
+    $('#tab_nav-lightning').click();
+  }
+
+  static addPlayerSearchInLineupTab() {
+    var css = `
+      .line-up__player:hover {
+        cursor: pointer;
+      }
+    `;
+
+    Page.importCss(css);
+
+    document.querySelector('#tab_nav-line-ups')?.addEventListener('click', (e) => {
+      const players = document.querySelectorAll('.line-up__player');
+
+      players.forEach((x) => {
+        x.addEventListener('click', (e) => {
+          const name = x.querySelector('.line-up__player-name').innerText.replaceAll('.', '').replaceAll(' ', '+');
+
+          // window.open(`https://www.eliteprospects.com/search/player?q=${name}`, '_blank').focus();
+          window.open(`https://www.google.com/search?q="eliteprospects"+${name}`, '_blank').focus();
+        });
+      });
+    });
+  }
+
   static updatePenaltySummary(gameJson) {
     $('#penalty-summary').empty();
 
@@ -408,17 +354,223 @@ class Ui {
       $('#point-summary').append(html);
   }
 
+  static getPenaltyHighlightHtml(gameTime, penaltyName, penaltyMinutes, team, player) {
+    return `
+      <tr class="penalty">
+        <td class="time">`+ gameTime + ` (` + App.getTimeRemaining(gameTime) + `)</td>
+        <td>` + penaltyName + `</td>
+        <td class="center">` + penaltyMinutes + ` mins</td>
+        <td>` + team + `</td>
+      </tr>
+      <tr class="players">
+        <td></td>
+        <td colspan="3">` + player + `</td>
+      </tr>
+    `;
+  }
+
+  static getGoalHighlighHtml(gameJson, gameTime, team, goalType, score, scorer, assist1, assist2) {
+    var players = scorer;
+
+    if(assist1) {
+      players += '<br>' + assist1;
+    }
+
+    if(assist2) {
+      players += '<br>' + assist2;
+    }
+
+    var isScoredByHomeTeam = gameJson.homeTeamName.startsWith(team);
+    var homeScore = score.split(' - ')[0];
+    var awayScore = score.split(' - ')[1];
+
+    var scoreHtml = isScoredByHomeTeam
+      ? '<span>' + homeScore + '</span> - ' + awayScore
+      : homeScore + ' - <span>' + awayScore + '</span>';
+
+    return `
+      <tr class="goal">
+        <td class="time">`+ gameTime + ` (` + App.getTimeRemaining(gameTime) + `)</td>
+        <td>` + scoreHtml + `</td>
+        <td class="center">[` + goalType + `]</td>
+        <td>` + team + `</td>
+      </tr>
+      <tr class="players">
+        <td></td>
+        <td colspan="3">` + players + `</td>
+      </tr>
+    `;
+  }
+
+  static updateHighlights(gameJson) {
+    var html = '';
+
+    // Remove 'Udvisningen til ... er slut'
+    var highlights = gameJson.highlights
+      .where(o => {
+        var shouldBeRemoved = o.eventText.match("^Udvisningen til .* er slut.$");
+        return !shouldBeRemoved;
+      })
+      .reverse();
+    
+    var previousPeriod = '';
+
+    highlights.forEach(o => {
+      var thisPeriod = App.getPeriod(o.gameTime);
+
+      // Insert period
+      if(thisPeriod != previousPeriod) {
+        html += `
+          <tr class="period">
+            <td colspan="4">` + thisPeriod + `</td>
+          </tr>
+        `;
+
+        previousPeriod = thisPeriod;
+      }
+
+      // Example: I tiden 12:30 udvises #44 Oliver True fra Herlev Eagles 2 minutter for slashing.
+      var m = o.eventText.match("^I tiden .+? udvises (.+?) fra (.+?) (.+) ([0-9]+) minutter for (.+?)\\.$");
+
+      if(m) {
+          var player = m[1];
+          var team = m[2];
+          var penaltyMinutes = m[4];
+          var penaltyName = m[5];
+
+          html += Ui.getPenaltyHighlightHtml(o.gameTime, penaltyName, penaltyMinutes, team, player);
+
+          return;
+
+      }
+      
+      // Example: I tiden 12:23 scorer Herlev Eagles til stillingen 3 - 0\\. Målet blev scoret af spiller #44 Oliver True, assisteret af #19 Mathias Asperup og af #1 Emil Zetterquist. [EQ]
+      m = o.eventText.match("^I tiden .+? scorer ([a-zA-ZæøåÆØÅ]+) .+? til stillingen (.+?)\\. Målet blev scoret af spiller (.+?), assisteret af (.+?) og af (.+?)\\. \\[(.+?)\\]$");
+
+      if(m) {
+        var team = m[1];
+        var score = m[2];
+        var scorer = m[3];
+        var assist1 = m[4];
+        var assist2 = m[5];
+        var goalType = m[6];
+
+        html += Ui.getGoalHighlighHtml(gameJson, o.gameTime, team, goalType, score, scorer, assist1, assist2);
+        
+        return;
+      }
+      
+      // Example: I tiden 12:23 scorer Herlev Eagles til stillingen 3-0. Målet blev scoret af spiller #44 Oliver True, assisteret af #19 Mathias Asperup. [SH1]
+      m = o.eventText.match("^I tiden .+? scorer ([a-zA-ZæøåÆØÅ]+) .+? til stillingen (.+?)\\. Målet blev scoret af spiller (.+?), assisteret af (.+?)\\. \\[(.+?)\\]$");
+
+      if(m) {
+        var team = m[1];
+        var score = m[2];
+        var scorer = m[3];
+        var assist1 = m[4];
+        var goalType = m[5];
+
+        html += Ui.getGoalHighlighHtml(gameJson, o.gameTime, team, goalType, score, scorer, assist1, null);
+        
+        return;
+      }
+
+      // Example: I tiden 12:23 scorer Herlev Eagles til stillingen 3-0. Målet blev scoret af spiller #44 Oliver True. [PP1]
+      m = o.eventText.match("^I tiden .+? scorer ([a-zA-ZæøåÆØÅ]+) .+? til stillingen (.+?)\\. Målet blev scoret af spiller (.+?)\\. \\[(.+?)\\]$");
+
+      if(m) {
+        var team = m[1];
+        var score = m[2];
+        var scorer = m[3];
+        var goalType = m[4];
+
+        html += Ui.getGoalHighlighHtml(gameJson, o.gameTime, team, goalType, score, scorer, null, null);
+        
+        return;
+      }
+
+      // Example: 0 - 1: (02:32) SønderjyskE Ishockey [EQ]. #27 Mathias Borring Hansen (uassisteret)
+      m = o.eventText.match("^(.+?): \\(.+?\\) (.+?) (.+) \\[(.+?)\\]\\. (.+?) \\(uassisteret\\)$");
+
+      if(m) {
+        var team = m[2];
+        var score = m[1];
+        var scorer = m[5];
+        var goalType = m[4];
+
+        html += Ui.getGoalHighlighHtml(gameJson, o.gameTime, team, goalType, score, scorer, null, null);
+
+        return;
+      }
+
+      // Example: 0 - 3: (05:10) SønderjyskE Ishockey [EQ]. #3 Mathias Kløve Mogensen (#9 Cameron Brown, #27 Mathias Borring Hansen)
+      m = o.eventText.match("^(.+?): \\(.+?\\) (.+?) (.+) \\[(.+?)\\]\\. (.+?) \\((.*?), (.*?)\\)$");
+
+      if(m) {
+        var team = m[2];
+        var score = m[1];
+        var scorer = m[5];
+        var assist1 = m[6];
+        var assist2 = m[7];
+        var goalType = m[4];
+
+        html += Ui.getGoalHighlighHtml(gameJson, o.gameTime, team, goalType, score, scorer, assist1, assist2);
+
+        return;
+      }
+
+      // Example: 0 - 1: (02:32) SønderjyskE Ishockey [EQ]. #27 Mathias Borring Hansen (#9 Cameron Brown)
+      m = o.eventText.match("^(.+?): \\(.+?\\) (.+?) (.+) \\[(.+?)\\]\\. (.+?) \\((.*?)\\)$");
+
+      if(m) {
+        var team = m[2];
+        var score = m[1];
+        var scorer = m[5];
+        var assist1 = m[6];
+        var goalType = m[4];
+
+        html += Ui.getGoalHighlighHtml(gameJson, o.gameTime, team, goalType, score, scorer, assist1, null);
+
+        return;
+      }
+
+      html += `
+        <tr class="penalty">
+          <td class="time">`+ o.gameTime + ` (` + App.getTimeRemaining(o.gameTime) + `)</td>
+          <td>ERROR</td>
+          <td class="center"></td>
+          <td></td>
+        </tr>
+      `;
+    });
+
+    $('#highlights-table').empty();
+    $('#highlights-table').append(html);
+  }
+
   static update(gameJson) {
     Ui.updatePenaltySummary(gameJson);
     Ui.updatePointSummary(gameJson);
+    Ui.updateHighlights(gameJson);
+  }
+
+  static toggleDetails(checkbox) {
+    var isChecked = $(checkbox).is(':checked');
+    
+    if(isChecked) {
+      $('#highlights-table').removeClass('hide-details');
+    } else {
+      $('#highlights-table').addClass('hide-details');
+    }
   }
 
   static init() {
     Page.importCss(`
-      .tabs .tab__content {
-        padding: 0 !important;
+      #nav-tabContent {
+        padding: 0;
+        background: inherit;
       }
-      
+
       .headline {
         max-width: 600px;
         margin: 30px auto 0;
@@ -449,22 +601,136 @@ class Ui {
         .player-table .center {
           text-align: center;
         }
+      
+      .headline.with-checkbox {
+        position: relative;
+      }
+      
+        .headline.with-checkbox div {
+          display: flex;  
+          position: absolute;
+          top: 10px;
+          right: 13px;
+          font-weight: normal;
+          font-size: 13px;
+          color: #5d5d5d;
+        }
+
+        .headline.with-checkbox input {
+          margin-left: 8px;
+        }
+
+        .headline.with-checkbox label {
+          margin: 0;
+        }
+      
+      #highlights-table {
+
+      }
+
+        #highlights-table tr.period {
+          text-transform: uppercase;
+          font-weight: bold;
+          color: #000;
+        }
+
+          #highlights-table tr.period td {
+            padding: 12px 0 5px;
+            text-align: center;
+          }
+
+          #highlights-table tr.period:first-of-type td {
+            padding-top: 0;
+          }
+        
+        #highlights-table tr.penalty {
+          font-weight: bold;
+          color: #cf0d26;
+        }
+
+        #highlights-table tr.players {
+          color: #737373;
+        }
+
+          #highlights-table tr.players td {
+            padding-bottom: 10px;
+            font-size: 0.9em;
+          }
+
+          #highlights-table.hide-details tr.players {
+            display: none;
+          }
+
+        #highlights-table tr.goal {
+          font-weight: bold;
+          color: #006b84;
+        }
+
+          #highlights-table tr.goal span {
+            font-weight: bold;
+            text-decoration: underline;
+          }
+
+        #highlights-table td.time {
+          white-space: nowrap;
+        }
+        
+        #highlights-table.hide-details td {
+          padding-bottom: 2px;
+        }
     `);
-
-    var html = `
-      <div class="headline">POINT</div>
-      <div id="point-summary" class="player-table"></div>
-      <div class="headline">UDVISNINGER</div>
-      <div id="penalty-summary" class="player-table"></div>
-    `;
-
-    $('#gameDataCollapse').append(html);
   }
 }
 
 class App {
   static latestReceivedJsonGames = '';
   static selectedGameId = 0;
+
+  static getTimeRemaining(timeString) {
+    if(timeString == '65:00') {
+      return '00:00';
+    }
+
+    var minutesString = timeString.substring(0, 2);
+    var secondsString = timeString.substring(3);
+    var totalSeconds = parseInt(minutesString) * 60 + parseInt(secondsString);
+    var totalSecondsInPeriod = totalSeconds % (20 * 60);
+
+    // Period length is 20 minutes
+    var periodLength = 20;
+
+    // Overtime is 5 minutes
+    if(totalSeconds > 60*60) {
+      periodLength = 5; 
+    }
+    
+    var remainingTotalSeconds = periodLength * 60 - totalSecondsInPeriod;
+    var remainingMinutes = Math.floor(remainingTotalSeconds / 60);
+    var remainingSeconds = remainingTotalSeconds - remainingMinutes * 60;
+    var timeString = remainingMinutes.toString().padStart(2, '0') + ':' + remainingSeconds.toString().padStart(2, '0');
+
+    return timeString;
+  }
+
+  static getPeriod(timeString) {
+    var minutesString = timeString.substring(0, 2);
+    var secondsString = timeString.substring(3);
+    var totalSeconds = parseInt(minutesString) * 60 + parseInt(secondsString);
+
+    if(totalSeconds > 60*60) {
+      return 'overtid';
+    }
+
+    if(totalSeconds > 40*60) {
+      return '3. periode';
+    }
+
+    if(totalSeconds > 20*60) {
+      return '2. periode';
+    }
+
+    return '1. periode';
+  }
 
   static updateUi() {
     if(App.latestReceivedJsonGames != '' && App.selectedGameId > 0) {
@@ -512,11 +778,11 @@ class App {
     };
   }
 
-  static setupEventListeners() {
-    
+  static setupEventListeners1() {
     // Wait until the games has loaded on the page.
     if($('.live-score__button').length == 0) {
-      setTimeout(App.setupEventListeners, 1000);
+      setTimeout(App.setupEventListeners1, 1000);
+      return;
     }
 
     // When a game is selected, update our ui.
@@ -527,21 +793,42 @@ class App {
     });
   }
 
+  static setupEventListeners2() {
+    // Wait until the games has loaded on the page.
+    if($('section.live-score').length == 0) {
+      setTimeout(App.setupEventListeners2, 1000);
+      return;
+    }
+
+    // When a game is selected, update our ui.
+    $('section.live-score').each((_, obj) => {
+      var gameIdString = $(obj).attr('id');
+      App.selectedGameId = parseInt(gameIdString);
+      App.updateUi();
+    });
+  }
+
+  static setupLightningTab() {
+    if($('#nav-tab').length == 0) {
+      setTimeout(App.setupLightningTab, 1000);
+      return;
+    }
+
+    Ui.setupLightningTab();
+  }  
+
   static init() {
     Ui.init();
     App.setupHttpInterceptor();
-    App.setupEventListeners();
+    App.setupEventListeners1();
+    App.setupEventListeners2();
+    App.setupLightningTab();
+    Ui.addPlayerSearchInLineupTab();
   }
 }
 
 (function () {
   'use strict';
-
-  fixTable();
-
-  window.setInterval(fixTable, 3000);
-
-  addPlayerSearch();
 
   $(document).ready(function() {
     App.init();
