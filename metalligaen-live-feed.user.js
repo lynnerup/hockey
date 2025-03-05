@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Metalligaen.dk live feed optimizations
 // @namespace    MetalligaenLive
-// @version      2025-03-05
+// @version      2025-03-06
 // @description  try to take over the world!
 // @author       You
 // @match        https://metalligaen.dk/live/
@@ -226,8 +226,8 @@ class Ui {
         <div class="headline with-checkbox">
           HIGHLIGHTS
           <div>
-            <label for="toggle-details">Show players</label>
-            <input type="checkbox" id="toggle-details" checked="checked" onclick="Ui.toggleDetails(this);">
+            <label for="toggle-details">Vis spillere</label>
+            <input type="checkbox" id="toggle-details" checked="checked">
           </div>
         </div>
         <div class="player-table">
@@ -243,6 +243,10 @@ class Ui {
     `;
 
     $('#nav-tabContent').prepend(html);
+
+    $('#toggle-details').bind('click', e => {
+      Ui.toggleDetails(e.target);
+    })
 
     // Insert new tab
     html = `
