@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Metalligaen.dk live feed optimizations
 // @namespace    MetalligaenLive
-// @version      2025-03-09
+// @version      2025-03-10
 // @description  try to take over the world!
 // @author       You
 // @match        https://metalligaen.dk/live/
