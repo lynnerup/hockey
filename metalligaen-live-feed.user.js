@@ -12,7 +12,6 @@
 
 // TODO:
 //  - In highlights table, the time remaining does not take playoffs into account, where overtime is still 20 minutes.
-//  - Insert "*" after remaining time, if it is the same time as the previous or the next one.
 
 
 /* LINQ */
@@ -35,6 +34,12 @@ Array.prototype.first = function(selector) {
 
 Array.prototype.where = function(selector) {
   return this.filter(selector);
+};
+
+Array.prototype.forEachWithIndex = function(action) {
+  for(var i = 0; i < this.length; i++) {
+    action(i, this[i]);
+  }
 };
 
 Array.prototype.groupByToList = function(keySelector) {
@@ -359,10 +364,10 @@ class Ui {
       $('#point-summary').append(html);
   }
 
-  static getPenaltyHighlightHtml(gameTime, penaltyName, penaltyMinutes, team, player) {
+  static getPenaltyHighlightHtml(gameTime, penaltyName, penaltyMinutes, team, player, hasMultipleHighlightsInSameTime) {
     return `
       <tr class="penalty">
-        <td class="time">`+ gameTime + ` (` + App.getTimeRemaining(gameTime) + `)</td>
+        <td class="time">`+ gameTime + ` (` + App.getTimeRemaining(gameTime) + `)` + (hasMultipleHighlightsInSameTime ? ` *` : ``) + `</td>
         <td>` + penaltyName + `</td>
         <td class="center">` + penaltyMinutes + ` mins</td>
         <td>` + team + `</td>
@@ -374,7 +379,7 @@ class Ui {
     `;
   }
 
-  static getGoalHighlighHtml(gameJson, gameTime, team, goalType, score, scorer, assist1, assist2) {
+  static getGoalHighlighHtml(gameJson, gameTime, team, goalType, score, scorer, assist1, assist2, hasMultipleHighlightsInSameTime) {
     var players = scorer;
 
     if(assist1) {
@@ -395,7 +400,7 @@ class Ui {
 
     return `
       <tr class="goal">
-        <td class="time">`+ gameTime + ` (` + App.getTimeRemaining(gameTime) + `)</td>
+        <td class="time">`+ gameTime + ` (` + App.getTimeRemaining(gameTime) + `)` + (hasMultipleHighlightsInSameTime ? ` *` : ``) + `</td>
         <td>` + scoreHtml + `</td>
         <td class="center">[` + goalType + `]</td>
         <td>` + team + `</td>
@@ -420,8 +425,9 @@ class Ui {
     
     var previousPeriod = '';
 
-    highlights.forEach(o => {
+    highlights.forEachWithIndex((index, o) => {
       var thisPeriod = App.getPeriod(o.gameTime);
+      var hasMultipleHighlightsInSameTime = App.hasMultipleHighlightsInSameTime(highlights, index);
 
       // Insert period
       if(thisPeriod != previousPeriod) {
@@ -443,7 +449,7 @@ class Ui {
         var penaltyMinutes = m[3];
         var penaltyName = m[4];
 
-        html += Ui.getPenaltyHighlightHtml(o.gameTime, penaltyName, penaltyMinutes, team, player);
+        html += Ui.getPenaltyHighlightHtml(o.gameTime, penaltyName, penaltyMinutes, team, player, hasMultipleHighlightsInSameTime);
 
         return;
       }
@@ -459,7 +465,7 @@ class Ui {
         var assist2 = m[5];
         var goalType = m[6];
 
-        html += Ui.getGoalHighlighHtml(gameJson, o.gameTime, team, goalType, score, scorer, assist1, assist2);
+        html += Ui.getGoalHighlighHtml(gameJson, o.gameTime, team, goalType, score, scorer, assist1, assist2, hasMultipleHighlightsInSameTime);
         
         return;
       }
@@ -474,7 +480,7 @@ class Ui {
         var assist1 = m[4];
         var goalType = m[5];
 
-        html += Ui.getGoalHighlighHtml(gameJson, o.gameTime, team, goalType, score, scorer, assist1, null);
+        html += Ui.getGoalHighlighHtml(gameJson, o.gameTime, team, goalType, score, scorer, assist1, null, hasMultipleHighlightsInSameTime);
         
         return;
       }
@@ -488,7 +494,7 @@ class Ui {
         var scorer = m[3];
         var goalType = m[4];
 
-        html += Ui.getGoalHighlighHtml(gameJson, o.gameTime, team, goalType, score, scorer, null, null);
+        html += Ui.getGoalHighlighHtml(gameJson, o.gameTime, team, goalType, score, scorer, null, null, hasMultipleHighlightsInSameTime);
         
         return;
       }
@@ -502,7 +508,7 @@ class Ui {
         var scorer = m[4];
         var goalType = m[3];
 
-        html += Ui.getGoalHighlighHtml(gameJson, o.gameTime, team, goalType, score, scorer, null, null);
+        html += Ui.getGoalHighlighHtml(gameJson, o.gameTime, team, goalType, score, scorer, null, null, hasMultipleHighlightsInSameTime);
 
         return;
       }
@@ -518,7 +524,7 @@ class Ui {
         var assist2 = m[6];
         var goalType = m[3];
 
-        html += Ui.getGoalHighlighHtml(gameJson, o.gameTime, team, goalType, score, scorer, assist1, assist2);
+        html += Ui.getGoalHighlighHtml(gameJson, o.gameTime, team, goalType, score, scorer, assist1, assist2, hasMultipleHighlightsInSameTime);
 
         return;
       }
@@ -533,7 +539,7 @@ class Ui {
         var assist1 = m[5];
         var goalType = m[3];
 
-        html += Ui.getGoalHighlighHtml(gameJson, o.gameTime, team, goalType, score, scorer, assist1, null);
+        html += Ui.getGoalHighlighHtml(gameJson, o.gameTime, team, goalType, score, scorer, assist1, null, hasMultipleHighlightsInSameTime);
 
         return;
       }
@@ -690,6 +696,29 @@ class App {
   static latestReceivedJsonGames = '';
   static selectedGameId = 0;
 
+  static hasMultipleHighlightsInSameTime(highlights, index) {
+    var currentTime = highlights[index].gameTime;
+    var result = false;
+
+    if(index > 0) {
+      var previousTime = highlights[index - 1].gameTime;
+
+      if(previousTime == currentTime) {
+        result = true;
+      }
+    }
+
+    if(highlights.length > index + 1) {
+      var nextTime = highlights[index + 1].gameTime;
+
+      if(nextTime == currentTime) {
+        result = true;
+      }
+    }
+
+    return result;
+  }
+
   static getTimeRemaining(timeString) {
     if(timeString == '65:00') {
       return '00:00';
@@ -756,6 +785,10 @@ class App {
 
       if(g.penalties == null) {
         g.penalties = [];
+      }
+
+      if(g.highlights == null) {
+        g.highlights = [];
       }
 
       g.goals = g.goals.distinct(goal => goal.goalTime);
