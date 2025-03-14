@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Metalligaen.dk live feed optimizations
 // @namespace    MetalligaenLive
-// @version      2025-03-07
+// @version      2025-03-08
 // @description  try to take over the world!
 // @author       You
 // @match        https://metalligaen.dk/live/
@@ -163,53 +163,53 @@ class GameJson {
       var key = goal.homeTeam + '-' + goal.scorer;
       
       if(!players.hasOwnProperty(key)) {
-          players[key] = Object.fromEntries([
-              ['number', goal.scorer],
-              ['name', goal.scorerName],
-              ['teamTown', GameJson.getTeamTown(gameJson, goal.homeTeam)],
-              ['goals', 0],
-              ['assists', 0],
-              ['points', 0]
-          ]);
+        players[key] = Object.fromEntries([
+          ['number', goal.scorer],
+          ['name', goal.scorerName],
+          ['teamTown', GameJson.getTeamTown(gameJson, goal.homeTeam)],
+          ['goals', 0],
+          ['assists', 0],
+          ['points', 0]
+        ]);
       }
   
       players[key].goals++;
       players[key].points++;
   
       if(goal.assist1 > 0) {
-          key = goal.homeTeam + '-' + goal.assist1;
-  
-          if(!players.hasOwnProperty(key)) {
-              players[key] = Object.fromEntries([
-                  ['number', goal.assist1],
-                  ['name', goal.assist1Name],
-                  ['teamTown', GameJson.getTeamTown(gameJson, goal.homeTeam)],
-                  ['goals', 0],
-                  ['assists', 0],
-                  ['points', 0]
-              ]);
-          }
-      
-          players[key].assists++;
-          players[key].points++;
+        key = goal.homeTeam + '-' + goal.assist1;
+
+        if(!players.hasOwnProperty(key)) {
+          players[key] = Object.fromEntries([
+            ['number', goal.assist1],
+            ['name', goal.assist1Name],
+            ['teamTown', GameJson.getTeamTown(gameJson, goal.homeTeam)],
+            ['goals', 0],
+            ['assists', 0],
+            ['points', 0]
+          ]);
+        }
+    
+        players[key].assists++;
+        players[key].points++;
       }
   
       if(goal.assist2 > 0) {
-          key = goal.homeTeam + '-' + goal.assist2;
-  
-          if(!players.hasOwnProperty(key)) {
-              players[key] = Object.fromEntries([
-                  ['number', goal.assist2],
-                  ['name', goal.assist2Name],
-                  ['teamTown', GameJson.getTeamTown(gameJson, goal.homeTeam)],
-                  ['goals', 0],
-                  ['assists', 0],
-                  ['points', 0]
-              ]);
-          }
-      
-          players[key].assists++;
-          players[key].points++;
+        key = goal.homeTeam + '-' + goal.assist2;
+
+        if(!players.hasOwnProperty(key)) {
+          players[key] = Object.fromEntries([
+            ['number', goal.assist2],
+            ['name', goal.assist2Name],
+            ['teamTown', GameJson.getTeamTown(gameJson, goal.homeTeam)],
+            ['goals', 0],
+            ['assists', 0],
+            ['points', 0]
+          ]);
+        }
+    
+        players[key].assists++;
+        players[key].points++;
       }
     });
 
@@ -435,25 +435,24 @@ class Ui {
       }
 
       // Example: I tiden 12:30 udvises #44 Oliver True fra Herlev Eagles 2 minutter for slashing.
-      var m = o.eventText.match("^I tiden .+? udvises (.+?) fra (.+?) (.+) ([0-9]+) minutter for (.+?)\\.$");
+      var m = o.eventText.match("^I tiden .+? udvises (.+?) fra (.+?) ([0-9]+) minutter for (.+?)\\.$");
 
       if(m) {
-          var player = m[1];
-          var team = m[2];
-          var penaltyMinutes = m[4];
-          var penaltyName = m[5];
+        var player = m[1];
+        var team = m[2].split(' ')[0];
+        var penaltyMinutes = m[3];
+        var penaltyName = m[4];
 
-          html += Ui.getPenaltyHighlightHtml(o.gameTime, penaltyName, penaltyMinutes, team, player);
+        html += Ui.getPenaltyHighlightHtml(o.gameTime, penaltyName, penaltyMinutes, team, player);
 
-          return;
-
+        return;
       }
       
       // Example: I tiden 12:23 scorer Herlev Eagles til stillingen 3 - 0\\. Målet blev scoret af spiller #44 Oliver True, assisteret af #19 Mathias Asperup og af #1 Emil Zetterquist. [EQ]
-      m = o.eventText.match("^I tiden .+? scorer ([a-zA-ZæøåÆØÅ]+) .+? til stillingen (.+?)\\. Målet blev scoret af spiller (.+?), assisteret af (.+?) og af (.+?)\\. \\[(.+?)\\]$");
+      m = o.eventText.match("^I tiden .+? scorer (.+?) til stillingen (.+?)\\. Målet blev scoret af spiller (.+?), assisteret af (.+?) og af (.+?)\\. \\[(.+?)\\]$");
 
       if(m) {
-        var team = m[1];
+        var team = m[1].split(' ')[0];
         var score = m[2];
         var scorer = m[3];
         var assist1 = m[4];
@@ -466,10 +465,10 @@ class Ui {
       }
       
       // Example: I tiden 12:23 scorer Herlev Eagles til stillingen 3-0. Målet blev scoret af spiller #44 Oliver True, assisteret af #19 Mathias Asperup. [SH1]
-      m = o.eventText.match("^I tiden .+? scorer ([a-zA-ZæøåÆØÅ]+) .+? til stillingen (.+?)\\. Målet blev scoret af spiller (.+?), assisteret af (.+?)\\. \\[(.+?)\\]$");
+      m = o.eventText.match("^I tiden .+? scorer (.+?) til stillingen (.+?)\\. Målet blev scoret af spiller (.+?), assisteret af (.+?)\\. \\[(.+?)\\]$");
 
       if(m) {
-        var team = m[1];
+        var team = m[1].split(' ')[0];
         var score = m[2];
         var scorer = m[3];
         var assist1 = m[4];
@@ -481,10 +480,10 @@ class Ui {
       }
 
       // Example: I tiden 12:23 scorer Herlev Eagles til stillingen 3-0. Målet blev scoret af spiller #44 Oliver True. [PP1]
-      m = o.eventText.match("^I tiden .+? scorer ([a-zA-ZæøåÆØÅ]+) .+? til stillingen (.+?)\\. Målet blev scoret af spiller (.+?)\\. \\[(.+?)\\]$");
+      m = o.eventText.match("^I tiden .+? scorer (.+?) til stillingen (.+?)\\. Målet blev scoret af spiller (.+?)\\. \\[(.+?)\\]$");
 
       if(m) {
-        var team = m[1];
+        var team = m[1].split(' ')[0];
         var score = m[2];
         var scorer = m[3];
         var goalType = m[4];
@@ -495,13 +494,13 @@ class Ui {
       }
 
       // Example: 0 - 1: (02:32) SønderjyskE Ishockey [EQ]. #27 Mathias Borring Hansen (uassisteret)
-      m = o.eventText.match("^(.+?): \\(.+?\\) (.+?) (.+) \\[(.+?)\\]\\. (.+?) \\(uassisteret\\)$");
+      m = o.eventText.match("^(.+?): \\(.+?\\) (.+?) \\[(.+?)\\]\\. (.+?) \\(uassisteret\\)$");
 
       if(m) {
-        var team = m[2];
+        var team = m[2].split(' ')[0];
         var score = m[1];
-        var scorer = m[5];
-        var goalType = m[4];
+        var scorer = m[4];
+        var goalType = m[3];
 
         html += Ui.getGoalHighlighHtml(gameJson, o.gameTime, team, goalType, score, scorer, null, null);
 
@@ -509,15 +508,15 @@ class Ui {
       }
 
       // Example: 0 - 3: (05:10) SønderjyskE Ishockey [EQ]. #3 Mathias Kløve Mogensen (#9 Cameron Brown, #27 Mathias Borring Hansen)
-      m = o.eventText.match("^(.+?): \\(.+?\\) (.+?) (.+) \\[(.+?)\\]\\. (.+?) \\((.*?), (.*?)\\)$");
+      m = o.eventText.match("^(.+?): \\(.+?\\) (.+?) \\[(.+?)\\]\\. (.+?) \\((.*?), (.*?)\\)$");
 
       if(m) {
-        var team = m[2];
+        var team = m[2].split(' ')[0];
         var score = m[1];
-        var scorer = m[5];
-        var assist1 = m[6];
-        var assist2 = m[7];
-        var goalType = m[4];
+        var scorer = m[4];
+        var assist1 = m[5];
+        var assist2 = m[6];
+        var goalType = m[3];
 
         html += Ui.getGoalHighlighHtml(gameJson, o.gameTime, team, goalType, score, scorer, assist1, assist2);
 
@@ -525,14 +524,14 @@ class Ui {
       }
 
       // Example: 0 - 1: (02:32) SønderjyskE Ishockey [EQ]. #27 Mathias Borring Hansen (#9 Cameron Brown)
-      m = o.eventText.match("^(.+?): \\(.+?\\) (.+?) (.+) \\[(.+?)\\]\\. (.+?) \\((.*?)\\)$");
+      m = o.eventText.match("^(.+?): \\(.+?\\) (.+?) \\[(.+?)\\]\\. (.+?) \\((.*?)\\)$");
 
       if(m) {
-        var team = m[2];
+        var team = m[2].split(' ')[0];
         var score = m[1];
-        var scorer = m[5];
-        var assist1 = m[6];
-        var goalType = m[4];
+        var scorer = m[4];
+        var assist1 = m[5];
+        var goalType = m[3];
 
         html += Ui.getGoalHighlighHtml(gameJson, o.gameTime, team, goalType, score, scorer, assist1, null);
 
