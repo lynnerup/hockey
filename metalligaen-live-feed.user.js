@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Metalligaen.dk live feed optimizations
 // @namespace    MetalligaenLive
-// @version      2025-03-06
+// @version      2025-03-07
 // @description  try to take over the world!
 // @author       You
 // @match        https://metalligaen.dk/live/
@@ -11,7 +11,8 @@
 // ==/UserScript==
 
 // TODO:
-//     - In highlights table, the time remaining does not take playoffs into account, where overtime is still 20 minutes.
+//  - In highlights table, the time remaining does not take playoffs into account, where overtime is still 20 minutes.
+//  - Insert "*" after remaining time, if it is the same time as the previous or the next one.
 
 
 /* LINQ */
@@ -750,6 +751,10 @@ class App {
     // Specifically, it contains duplicated in the goals list.
 
     jsonGames.forEach(g => {
+      if(g.goals == null) {
+        g.goals = [];
+      }
+
       g.goals = g.goals.distinct(goal => goal.goalTime);
     });
 
