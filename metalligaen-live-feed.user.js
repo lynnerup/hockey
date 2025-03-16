@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Metalligaen.dk live feed optimizations
 // @namespace    MetalligaenLive
-// @version      2025-03-12
+// @version      2025-03-13
 // @description  try to take over the world!
 // @author       You
 // @match        https://metalligaen.dk/live/
@@ -758,8 +758,8 @@ class App {
   }
 
   static getTimeRemaining(timeString) {
-    var minutesString = timeString.substring(0, 2);
-    var secondsString = timeString.substring(3);
+    var minutesString = timeString.split(':')[0];
+    var secondsString = timeString.split(':')[1];
     var totalSeconds = parseInt(minutesString) * 60 + parseInt(secondsString);
     var totalSecondsLeftInPeriod = totalSeconds % (20 * 60);
 
@@ -784,8 +784,8 @@ class App {
   }
 
   static getPeriod(timeString) {
-    var minutesString = timeString.substring(0, 2);
-    var secondsString = timeString.substring(3);
+    var minutesString = timeString.split(':')[0];
+    var secondsString = timeString.split(':')[1];
     var totalSeconds = parseInt(minutesString) * 60 + parseInt(secondsString);
 
     if(totalSeconds == 0) {
