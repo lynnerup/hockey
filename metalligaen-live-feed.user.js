@@ -10,9 +10,6 @@
 // @grant        none
 // ==/UserScript==
 
-// TODO:
-//  - In highlights table, the time remaining does not take playoffs into account, where overtime is still 20 minutes.
-
 
 /* jQuery */
 
@@ -240,19 +237,25 @@ class GameJson {
 
 class Ui {
   static setupLightningTab() {
+    var isChecked = (localStorage.getItem('lightning-showDetails') ?? 'false') == 'true';
+
     // Insert new tab content
     var html = `
       <div class="tab__panel tab-pane" id="tab__panel-lightning" role="tabpanel" aria-labelledby="tab_nav-lightning">
         <div class="headline with-checkbox">
           HIGHLIGHTS
-          <div>
+          <div class="checkbox-left">
+            <label for="toggle-otlength">OT = 5 mins</label>
+            <input type="checkbox" id="toggle-otlength"` + (App.overTimeIsFiveMinutes ? ' checked="checked"' : '') + `>
+          </div>
+          <div class="checkbox-right">
             <label for="toggle-details">Vis spillere</label>
-            <input type="checkbox" id="toggle-details">
+            <input type="checkbox" id="toggle-details"` + (isChecked ? ' checked="checked"' : '') + `>
           </div>
         </div>
         <div class="player-table">
           <table>
-            <tbody id="highlights-table" class="hide-details"></tbody>
+            <tbody id="highlights-table" class="` + (!isChecked ? 'hide-details' : '') + `"></tbody>
           </table>
         </div>
         <div class="headline">POINT</div>
@@ -266,7 +269,11 @@ class Ui {
 
     $('#toggle-details').bind('click', e => {
       Ui.toggleDetails(e.target);
-    })
+    });
+
+    $('#toggle-otlength').bind('click', e => {
+      App.toggleOvertimeLength(e.target);
+    });
 
     // Insert new tab
     html = `
@@ -586,6 +593,8 @@ class Ui {
     } else {
       $('#highlights-table').addClass('hide-details');
     }
+
+    localStorage.setItem('lightning-showDetails', isChecked.toString());
   }
 
   static init() {
@@ -634,10 +643,17 @@ class Ui {
           display: flex;  
           position: absolute;
           top: 10px;
-          right: 13px;
           font-weight: normal;
           font-size: 13px;
           color: #5d5d5d;
+        }
+
+        .headline.with-checkbox div.checkbox-left {
+          left: 13px;
+        }
+
+        .headline.with-checkbox div.checkbox-right {
+          right: 13px;
         }
 
         .headline.with-checkbox input {
@@ -709,6 +725,14 @@ class Ui {
 class App {
   static latestReceivedJsonGames = '';
   static selectedGameId = 0;
+  static overTimeIsFiveMinutes = true;
+
+  static toggleOvertimeLength(checkbox) {
+    App.overTimeIsFiveMinutes = $(checkbox).is(':checked');
+    App.updateUi();
+
+    localStorage.setItem('lightning-overTimeIsFiveMinutes', App.overTimeIsFiveMinutes.toString());
+  }
 
   static hasMultipleHighlightsInSameTime(highlights, index) {
     var currentTime = highlights[index].gameTime;
@@ -734,24 +758,24 @@ class App {
   }
 
   static getTimeRemaining(timeString) {
-    if(timeString == '65:00') {
-      return '00:00';
-    }
-
     var minutesString = timeString.substring(0, 2);
     var secondsString = timeString.substring(3);
     var totalSeconds = parseInt(minutesString) * 60 + parseInt(secondsString);
-    var totalSecondsInPeriod = totalSeconds % (20 * 60);
+    var totalSecondsLeftInPeriod = totalSeconds % (20 * 60);
 
-    // Period length is 20 minutes
+    var isOvertime = totalSeconds > 60*60;
     var periodLength = 20;
+    
+    // 5 minute overtime
+    if(isOvertime && App.overTimeIsFiveMinutes) {
+      periodLength = 5;
+    }
 
-    // Overtime is 5 minutes
-    if(totalSeconds > 60*60) {
-      periodLength = 5; 
+    if(totalSecondsLeftInPeriod == 0) {
+      return '00:00';
     }
     
-    var remainingTotalSeconds = periodLength * 60 - totalSecondsInPeriod;
+    var remainingTotalSeconds = periodLength * 60 - totalSecondsLeftInPeriod;
     var remainingMinutes = Math.floor(remainingTotalSeconds / 60);
     var remainingSeconds = remainingTotalSeconds - remainingMinutes * 60;
     var timeString = remainingMinutes.toString().padStart(2, '0') + ':' + remainingSeconds.toString().padStart(2, '0');
@@ -764,19 +788,18 @@ class App {
     var secondsString = timeString.substring(3);
     var totalSeconds = parseInt(minutesString) * 60 + parseInt(secondsString);
 
-    if(totalSeconds > 60*60) {
+    if(totalSeconds == 0) {
+      return '1. periode';
+    }
+
+    var isOvertime = totalSeconds > 60*60;
+
+    if(isOvertime && App.overTimeIsFiveMinutes) {
       return 'overtid';
     }
 
-    if(totalSeconds > 40*60) {
-      return '3. periode';
-    }
-
-    if(totalSeconds > 20*60) {
-      return '2. periode';
-    }
-
-    return '1. periode';
+    var periodNumber = Math.ceil(totalSeconds / (20*60));
+    return periodNumber.toString() + '. periode';
   }
 
   static updateUi() {
@@ -864,10 +887,15 @@ class App {
     }
 
     Ui.setupLightningTab();
-  }  
+  }
+
+  static loadSettingsFromLocalStorage() {
+    App.overTimeIsFiveMinutes = (localStorage.getItem('lightning-overTimeIsFiveMinutes') ?? 'true') == 'true';
+  }
 
   static init() {
     Ui.init();
+    App.loadSettingsFromLocalStorage();
     App.setupHttpInterceptor();
     App.setupEventListeners();
     App.setupLightningTab();
