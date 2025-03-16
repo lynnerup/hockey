@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Metalligaen.dk live feed optimizations
 // @namespace    MetalligaenLive
-// @version      2025-03-10
+// @version      2025-03-11
 // @description  try to take over the world!
 // @author       You
 // @match        https://metalligaen.dk/live/
@@ -14,7 +14,21 @@
 //  - In highlights table, the time remaining does not take playoffs into account, where overtime is still 20 minutes.
 
 
-/* LINQ */
+/* jQuery */
+
+$.fn.onClassChange = function(cb) {
+  return $(this).each((_, el) => {
+    new MutationObserver(mutations => {
+      mutations.forEach(mutation => cb && cb(mutation.target, mutation.target.className));
+    }).observe(el, {
+      attributes: true,
+      attributeFilter: ['class'] // only listen for class attribute changes 
+    });
+  });
+}
+
+
+/* LINQ */  
 
 Array.prototype.select = function(selector) {
   return this.map(selector);
@@ -233,12 +247,12 @@ class Ui {
           HIGHLIGHTS
           <div>
             <label for="toggle-details">Vis spillere</label>
-            <input type="checkbox" id="toggle-details" checked="checked">
+            <input type="checkbox" id="toggle-details">
           </div>
         </div>
         <div class="player-table">
           <table>
-            <tbody id="highlights-table"></tbody>
+            <tbody id="highlights-table" class="hide-details"></tbody>
           </table>
         </div>
         <div class="headline">POINT</div>
@@ -823,33 +837,23 @@ class App {
     };
   }
 
-  static setupEventListeners1() {
-    // Wait until the games has loaded on the page.
-    if($('.live-score__button').length == 0) {
-      setTimeout(App.setupEventListeners1, 1000);
-      return;
-    }
-
-    // When a game is selected, update our ui.
-    $('.live-score__button').bind('click', e => {
-      var gameIdString = $(e.target).attr('aria-controls').replace('gameDetails', '');
-      App.selectedGameId = parseInt(gameIdString);
-      App.updateUi();
-    });
-  }
-
-  static setupEventListeners2() {
+  static setupEventListeners() {
     // Wait until the games has loaded on the page.
     if($('section.live-score').length == 0) {
-      setTimeout(App.setupEventListeners2, 1000);
+      setTimeout(App.setupEventListeners, 1000);
       return;
     }
 
     // When a game is selected, update our ui.
-    $('section.live-score').each((_, obj) => {
-      var gameIdString = $(obj).attr('id');
-      App.selectedGameId = parseInt(gameIdString);
-      App.updateUi();
+    $("section.live-score").onClassChange((obj, newClass) => {
+      if(newClass.indexOf('live-score--active') > -1) {
+        var gameIdString = $(obj).attr('id');
+        
+        console.log('Selected game id ' + gameIdString);
+  
+        App.selectedGameId = parseInt(gameIdString);
+        App.updateUi();
+      }
     });
   }
 
@@ -865,8 +869,7 @@ class App {
   static init() {
     Ui.init();
     App.setupHttpInterceptor();
-    App.setupEventListeners1();
-    App.setupEventListeners2();
+    App.setupEventListeners();
     App.setupLightningTab();
     Ui.addPlayerSearchInLineupTab();
   }
