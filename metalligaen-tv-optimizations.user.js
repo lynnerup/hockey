@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Metalligaen.tv player optimizations
 // @namespace    MetalligaenLive
-// @version      2025-02-16
+// @version      2025-04-03
 // @description  Fixer lortensen
 // @author       You
 // @match        https://www.metalligaen.tv/*
@@ -142,19 +142,26 @@ async function initPlayerSyncToolbar() {
   wrapper.insertAdjacentHTML(
     'beforeend',
     `
-    <button id="toolbar-get-server-time" class="">Get server time</button>
-    <button id="toolbar-set-server-time" class="">Set server time</button>
-    <div class="checkbox-container">
-      <label>
-        <span>I am the client</span>
-        <input id="toolbar-isclient" type="checkbox" name="isclient">
-      </label>
-    </div>
-    <div class="checkbox-container">
-      <label>
-        <span>I am the server</span>
-        <input id="toolbar-isserver" type="checkbox" name="isserver">
-      </label>
+    <svg height="40px" width="40px" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280.027 280.027" xml:space="preserve">
+      <path style="fill:#efc75e" d="M249.399 96.583h-83.404L216.382 0H88.419L30.628 166.161h79.712L71.906 280.027 249.399 96.583z"></path>
+      <path style="fill:#f5dd9d" d="M101.046 17.598h78.364l-70.584 17.537-43.168 78.758 35.388-96.295z"></path>
+    </svg>
+
+    <div id="options-container" class="hidden">
+      <div class="option-item"><button id="toolbar-get-server-time" class="option-item-button">Get server time</button></div>
+      <div class="option-item"><button id="toolbar-set-server-time" class="option-item-button">Set server time</button></div>
+      <div class="option-item checkbox-container">
+        <label>
+          <span>I am the client</span>
+          <input id="toolbar-isclient" type="checkbox" name="isclient">
+        </label>
+      </div>
+      <div class="option-item checkbox-container">
+        <label>
+          <span>I am the server</span>
+          <input id="toolbar-isserver" type="checkbox" name="isserver">
+        </label>
+      </div>
     </div>
     `
   );
@@ -165,48 +172,65 @@ async function initPlayerSyncToolbar() {
   const customCss = `
     #custom-extension-toolbar {
       position: fixed;
-      bottom: 10px;
-      right: 10px;
-      z-index: 999;
-      text-align: right;
+      bottom: 16px;
+      right: 16px;
+      z-index: 1000;
+      cursor: pointer;
     }
-
-    #custom-extension-toolbar button,
-    #custom-extension-toolbar .checkbox-container {
-      /*width: 100px;*/
-      width: auto;
-      margin: 0;
-      padding: 10px;
-
+    #options-container {
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(20px);
+      transition: opacity 0.3s ease, visibility: 0.3s ease, transform 0.3s ease;
+      position: absolute;
+      bottom: 60px;
+      right: 0;
       background-color: white;
-      color: black;
-      border: 1px solid black;
-      border-radius: 10px;
+      padding: 16px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      width: 250px;
+    }
+    #options-container.expanded {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+    }
+    .option-item {
+      margin-bottom: 12px;
+    }
+    .option-item label {
+      margin-left: 8px;
+      font-size: 14px;
+      color: #555;
       cursor: pointer;
-
-      font-size: 12px;
-      font-weight: 500;
-      font-family: sans-serif;
-      text-transform: uppercase;
     }
-
-    #custom-extension-toolbar .checkbox-container {
-      display: inline-block;
+    .option-item input[type="checkbox"] {
+      margin-right: 8px;
     }
-
-    #custom-extension-toolbar .checkbox-container label {
+    .option-item-button {
+      padding: 10px 16px;
+      border-radius: 6px;
+      background-color: #6366f1;
+      color: white;
+      font-size: 14px;
       cursor: pointer;
+      transition: background-color 0.2s ease;
+      border: none;
+      display: block;
+      width: 100%;
+      text-align: center;
     }
-
-    #custom-extension-toolbar input[type="checkbox"] {
-      vertical-align: middle;
+    .option-item-button:active {
+      background-color: #4338ca;
     }
-
+    .hidden {
+      display: none;
+    }
     #custom-extension-toolbar button.custom-error {
       background-color: #dc3545;
       color: white;
     }
-
     #custom-extension-toolbar button.custom-success {
       background-color: #7bbb27;
       color: white;
@@ -219,6 +243,10 @@ async function initPlayerSyncToolbar() {
   document.head.appendChild(styleElement);
 
   // Add javascript
+  document.querySelector('#custom-extension-toolbar svg').addEventListener('click', () => {
+    document.getElementById('options-container').classList.toggle('expanded');
+    document.getElementById('options-container').classList.toggle('hidden');
+  });
   document.getElementById('toolbar-get-server-time').addEventListener('click', getServerTime);
   document.getElementById('toolbar-set-server-time').addEventListener('click', setServerTime);
 
